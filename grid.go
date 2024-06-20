@@ -17,44 +17,49 @@ var (
 		0.5, 0.5, 0,
 		0.5, -0.5, 0,
 	}
+	scale float32 = 0.8
 )
 
-type cell struct {
-	drawable uint32
+type point struct {
+	drawable uint32 ``
 
-	display bool
+	isEdge bool
+	isWall bool
 
 	x int
 	y int
 }
 
-func (c *cell) draw() {
-	if !c.display {
+func (p *point) draw() {
+	if !p.isEdge && !p.isWall {
 		return
 	}
 
-	gl.BindVertexArray(c.drawable)
+	gl.BindVertexArray(p.drawable)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
 }
 
-func makeGrid() [][]*cell {
+func makeGrid() [][]*point {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	cells := make([][]*cell, rows)
+	points := make([][]*point, rows)
 	for x := 0; x < rows; x++ {
 		for y := 0; y < columns; y++ {
-			c := newCell(x, y)
+			point := newpoint(x, y)
 
-			c.display = rand.Float64() < 0.1
+			if x == 0 || x == rows-1 || y == 0 || y == columns-1 {
+				point.isEdge = true
+				point.isWall = true
+			}
 
-			cells[x] = append(cells[x], c)
+			points[x] = append(points[x], point)
 		}
 	}
 
-	return cells
+	return points
 }
 
-func newCell(x, y int) *cell {
+func newpoint(x, y int) *point {
 	// create a copy of the square definition which means we can modify the coords and not affect others
 	points := make([]float32, len(square))
 	copy(points, square)
@@ -66,10 +71,10 @@ func newCell(x, y int) *cell {
 		switch i % 3 {
 		// calcs based on board dimensions
 		case 0:
-			size = 1.0 / float32(columns)
+			size = scale / float32(columns)
 			position = float32(x) * size
 		case 1:
-			size = 1.0 / float32(rows)
+			size = scale / float32(rows)
 			position = float32(y) * size
 		default:
 			continue
@@ -78,13 +83,13 @@ func newCell(x, y int) *cell {
 
 		// update points accordingly
 		if points[i] < 0 {
-			points[i] = (position * 2) - 1
+			points[i] = (position * 2) - scale
 		} else {
-			points[i] = ((position + size) * 2) - 1
+			points[i] = ((position + size) * 2) - scale
 		}
 	}
 
-	return &cell{
+	return &point{
 		drawable: makeVao(points),
 
 		x: x,

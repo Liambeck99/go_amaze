@@ -15,7 +15,7 @@ const (
 	height = 500
 
 	// GLSL shader source code
-	vertexShaderSource = `
+	vertShader = `
 	#version 410
 	in vec3 vp;
 	void main() {
@@ -23,7 +23,7 @@ const (
 	}
 	` + "\x00"  // required termination character for opengl to compile
 
-	fragmentShaderSource = `
+	fragWall = `
 	#version 410
 	out vec4 frag_colour;
 	void main() {
@@ -61,18 +61,19 @@ func initOpenGL() uint32 {
 	version := gl.GoStr(gl.GetString(gl.VERSION))
 	log.Println("OpenGL version", version)
 
-	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
+	vertexShader, err := compileShader(vertShader, gl.VERTEX_SHADER)
 	if err != nil {
 		panic(err)
 	}
-	fragmentShader, err := compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
+	frag_wall, err := compileShader(fragWall, gl.FRAGMENT_SHADER)
 	if err != nil {
 		panic(err)
 	}
 
 	prog := gl.CreateProgram()
 	gl.AttachShader(prog, vertexShader)
-	gl.AttachShader(prog, fragmentShader)
+	gl.AttachShader(prog, frag_wall)
+
 	gl.LinkProgram(prog)
 	return prog
 }
@@ -112,7 +113,7 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
 
-		return 0, fmt.Errorf("faield to compile %v: %v", source, log)
+		return 0, fmt.Errorf("failed to compile %v: %v", source, log)
 	}
 
 	return shader, nil
