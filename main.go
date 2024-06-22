@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	fps = 6
+	fps = 30
 	// TODO: currently row must eq columns, but potentially worth changing in future
 	// TODO: row/col to take user inputs
 	rows    = 21
@@ -17,6 +17,7 @@ const (
 )
 
 func main() {
+
 	runtime.LockOSThread()
 
 	window := initGlfw()
@@ -26,10 +27,16 @@ func main() {
 	grid := makeGrid()
 	rdfs := makerdfs(grid)
 
+	first_loop := true
 	for !window.ShouldClose() {
 		t := time.Now()
 
 		draw(window, program, rdfs.grid)
+
+		if first_loop {
+			time.Sleep(15 * time.Second)
+			first_loop = false
+		}
 
 		rdfs.step()
 
@@ -43,7 +50,7 @@ func draw(window *glfw.Window, program uint32, grid [][]*point) {
 
 	for x := range grid {
 		for _, p := range grid[x] {
-			p.draw()
+			p.draw(program)
 		}
 	}
 

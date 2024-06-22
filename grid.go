@@ -17,7 +17,9 @@ var (
 		0.5, 0.5, 0,
 		0.5, -0.5, 0,
 	}
-	scale float32 = 0.8
+	scale float32 = 1.00
+
+	wallColour = [3]float32{0.27, 0.28, 0.35}
 )
 
 type point struct {
@@ -26,17 +28,30 @@ type point struct {
 	isEdge bool
 	isWall bool
 
+	colour [3]float32
+
 	x int
 	y int
 }
 
-func (p *point) draw() {
-	if !p.isEdge && !p.isWall {
-		return
-	}
+func (p *point) draw(program uint32) {
+	r := p.colour[0]
+	g := p.colour[1]
+	b := p.colour[2]
+
+	gl.Uniform3f(gl.GetUniformLocation(program, gl.Str("uColor"+"\x00")), r, g, b)
 
 	gl.BindVertexArray(p.drawable)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
+}
+
+func (p *point) setColour(r, g, b int) {
+	p.colour = [3]float32{float32(r), float32(g), float32(b)}
+}
+
+func (p *point) setWall() {
+	p.isWall = true
+	p.colour = wallColour
 }
 
 func makeGrid() [][]*point {
@@ -50,6 +65,7 @@ func makeGrid() [][]*point {
 			if x == 0 || x == rows-1 || y == 0 || y == columns-1 {
 				point.isEdge = true
 				point.isWall = true
+				point.colour = wallColour
 			}
 
 			points[x] = append(points[x], point)
@@ -89,8 +105,12 @@ func newpoint(x, y int) *point {
 		}
 	}
 
+	colour := [3]float32{1.0, 1.0, 1.0} // set to white by default
+
 	return &point{
 		drawable: makeVao(points),
+
+		colour: colour,
 
 		x: x,
 		y: y,

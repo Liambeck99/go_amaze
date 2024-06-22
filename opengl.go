@@ -25,9 +25,9 @@ const (
 
 	fragWall = `
 	#version 410
-	out vec4 frag_colour;
+	uniform vec3 uColor;
 	void main() {
-		frag_colour = vec4(1,1,1,1);
+		gl_FragColor = vec4( uColor, 1.0);
 	}
 	` + "\x00"
 )

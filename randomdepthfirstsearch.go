@@ -2,6 +2,13 @@ package main
 
 import "math/rand"
 
+// ? Could maybe allow colour schemes in the future i.e. catpuccin ??
+var (
+	colourInStack = [3]float32{0.98, 0.70, 0.52}
+	colourInMaze  = [3]float32{0.65, 0.89, 0.63}
+	colourHead    = [3]float32{0.95, 0.54, 0.66}
+)
+
 type cell struct {
 	*point
 	index     int
@@ -21,16 +28,11 @@ func makerdfs(grid [][]*point) *rdfs {
 			if p.isEdge {
 				continue
 			}
-			p.isWall = true
+			p.setWall()
 		}
 	}
 
 	cells := getcells(grid)
-
-	// unset all cells to begin algorithm
-	for _, c := range cells {
-		c.point.isWall = false
-	}
 
 	// create stack and assign a cell to the stack to start algorithm
 	stack := NewStack()
@@ -66,18 +68,19 @@ func getcells(grid [][]*point) []*cell {
 	return cells
 }
 
-func (maze *rdfs) step() {
+func (r *rdfs) step() {
 	//* 1. pop a cell off stack
-	current_cell, err := maze.stack.Pop()
+	current_cell, err := r.stack.Pop()
+
 	if err != nil {
 		println("RDFS Complete")
 		return
 	}
-	unvisNeighbours := maze.getUnvisitedNeighbours(current_cell.index)
+	unvisNeighbours := r.getUnvisitedNeighbours(current_cell.index)
 
 	//* 2. if the current cell has any unvisted neighbours push onto stack
 	if len(unvisNeighbours) > 0 {
-		maze.stack.Push(current_cell)
+		r.stack.Push(current_cell)
 
 		//* 3. choose one of unvisited neighbours (random)
 		rand_idx := rand.Intn(len(unvisNeighbours))
@@ -85,65 +88,97 @@ func (maze *rdfs) step() {
 		next_cell := unvisNeighbours[rand_idx]
 
 		//* 4. remove wall between current and chosen
-		maze.removeWallBetween(current_cell.index, next_cell.index)
+		r.getPointBetweenCells(current_cell.index, next_cell.index).isWall = false
 
 		//* 5. mark chosen cell as visited and push to stack
 		next_cell.isVisited = true
-		maze.stack.Push(next_cell)
+		next_cell.isWall = false
+		r.stack.Push(next_cell)
 	}
-}
 
-func (maze *rdfs) getUnvisitedNeighbours(index int) []*cell {
-	unvisitedNeighbours := make([]*cell, 0)
+	r.updateColours()
+}
+func (r *rdfs) getNeighbours(index int) []*cell {
+	n := make([]*cell, 0)
 
 	cellRowCount := (rows - 1) / 2
 
 	// not left
 	if index%cellRowCount != 0 {
-		if !maze.cells[index-1].isVisited {
-			unvisitedNeighbours = append(unvisitedNeighbours, maze.cells[index-1])
-		}
+		n = append(n, r.cells[index-1])
 	}
 
 	// not right
 	if index%cellRowCount != cellRowCount-1 {
-		if !maze.cells[index+1].isVisited {
-			unvisitedNeighbours = append(unvisitedNeighbours, maze.cells[index+1])
-		}
+		n = append(n, r.cells[index+1])
 	}
 
 	// not top
-	if index+cellRowCount < len(maze.cells) {
-		if !maze.cells[index+cellRowCount].isVisited {
-			unvisitedNeighbours = append(unvisitedNeighbours, maze.cells[index+cellRowCount])
-		}
+	if index+cellRowCount < len(r.cells) {
+		n = append(n, r.cells[index+cellRowCount])
 	}
 
 	// not bottom
 	if index-cellRowCount >= 0 {
-		if !maze.cells[index-cellRowCount].isVisited {
-			unvisitedNeighbours = append(unvisitedNeighbours, maze.cells[index-cellRowCount])
+		n = append(n, r.cells[index-cellRowCount])
+	}
+
+	return n
+}
+func (r *rdfs) getUnvisitedNeighbours(i int) []*cell {
+	u := make([]*cell, 0)
+
+	for _, c := range r.getNeighbours(i) {
+		if !c.isVisited {
+			u = append(u, c)
 		}
 	}
-	return unvisitedNeighbours
-}
-func (maze *rdfs) removeWallBetween(current int, next int) {
-	l := current
-	r := next
 
-	if next < current {
-		l = next
-		r = current
+	return u
+}
+
+func (r *rdfs) getPointBetweenCells(a, b int) *point {
+	if b < a {
+		tmp := b
+		b = a
+		a = tmp
 	}
 
-	dt := r - l
+	dt := b - a
 
-	x := maze.cells[l].point.x
-	y := maze.cells[l].point.y
+	x := r.cells[a].point.x
+	y := r.cells[a].point.y
 
 	if dt == 1 { // on horizontal row
-		maze.grid[y+1][x].isWall = false
+		return r.grid[x][y+1]
 	} else {
-		maze.grid[y][x+1].isWall = false
+		return r.grid[x+1][y]
 	}
+}
+
+func (r *rdfs) updateColours() {
+	// set all non walls to included in grid
+	for x := range r.grid {
+		for _, p := range r.grid[x] {
+			if !p.isWall {
+				p.colour = colourInMaze
+			}
+		}
+	}
+
+	s := *r.stack
+
+	for i := range s {
+		s[i].colour = colourInStack
+		if i == len(s)-1 {
+			continue
+		}
+		r.getPointBetweenCells(s[i].index, s[i+1].index).colour = colourInStack
+	}
+
+	head, err := r.stack.Last()
+	if err == nil {
+		head.colour = colourHead
+	}
+
 }
